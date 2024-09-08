@@ -75,4 +75,4 @@ def train(args):
 ### Data format
 Data should contains the following columns. Columns after `ticker` should be your features sent to agents.
 
-![alt text](./img/image.png)
+![dataset](./img/dataset.png)
