@@ -1,78 +1,78 @@
 # Portfolio Optimization Environment
 
-This project implements a portfolio optimization environment using OpenAI Gym (now Gymnasium) for reinforcement learning applications in financial trading.
+A Gymnasium-compatible portfolio optimization environment design for reinforcement learning research in financial trading.
 
-## Overview
+The environment is meant to model a multi-asset portfolio allocation task where an agent observes historical market features, chooses portfolio weights, and receives rewards based on portfolio value after costs.
 
-The environment simulates a portfolio management scenario where an agent can allocate capital across multiple assets. It includes features such as:
+## What It Covers
 
-- Multi-asset trading
-- Transaction costs and taxes
-- Customizable lookback window for historical data
-- Flexible state representation
+- Multi-asset portfolio allocation
+- Continuous action space for portfolio weights
+- Lookback-window based observations
+- Transaction cost and tax assumptions
+- Compatibility with reinforcement learning libraries such as Stable-Baselines3 and ElegantRL
 
-## Key Components
+## Core Concepts
 
-1. `AssetManager`: Handles the core logic of portfolio management, including:
-   - Asset valuation
-   - Order execution
-   - State management
+The intended environment is organized around two responsibilities:
 
-2. `PortfolioOptEnv_gym`: The main Gym environment class, which:
-   - Implements the Gym interface (reset, step, etc.)
-   - Calculates rewards and episode metrics
-   - Handles action mapping and state generation
+- `AssetManager`: portfolio accounting, asset valuation, order execution, and state updates.
+- `PortfolioOptEnv_gym`: Gym/Gymnasium-style environment API with `reset`, `step`, reward calculation, and episode metrics.
 
-3. Utility functions for creating observation spaces
+## Data Format
 
-## Usage
+Input data should include timestamped OHLCV-style market data and one row per asset per timestamp. Columns after `ticker` can be used as model features.
 
-To use this environment in your reinforcement learning experiments:
+![Dataset format](./img/dataset.png)
 
-1. Initialize the environment with appropriate parameters
-2. Use the standard Gym interface for interacting with the environment
+## Example Usage
 
-Example usage of the environment with `stable baselines3`:
 ```python
-def train(args):
-    cwd = f"./experiments/{args.agent}/{args.dataset_name}_{args.version}"
+import pandas as pd
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
-    train_data = pd.read_parquet(train_dataset_path)
-    
-    env_args = {
-        "env_name": args.env_name,
-        "num_envs": args.num_envs,
-        "max_step": args.max_step,
-        "status": "train",
-        "state_dim": args.state_dim,
-        "action_dim": args.action_dim,
-        "if_discrete": False,
-        "lookback_window": lookback,
-        "break_step": args.break_step,
-        "total_value": args.total_value,
-        "commision": args.transaction_cost,
-        "tax_rate": args.tax_rate,
-        "device": "cuda",
-        "data": train_data,
-        "cwd": cwd,
-    }
-    
-    train_args = env_args.copy()
+from env import PortfolioOptEnv_gym
 
-    train_env = PortfolioOptEnv_gym(**train_args)
-    train_env = SubprocVecEnv([lambda: train_env for _ in range(args.num_envs)])
+train_data = pd.read_parquet("data/train.parquet")
 
-    model = PPO(
-        "MlpPolicy",
-        train_env,
-        verbose=0,
-        seed=args.random_seed,
-    )
-    
-    model.learn(total_timesteps=args.break_step)
-    model.save(f"{cwd}/model/last_model")
+env_args = {
+    "env_name": "PortfolioOptEnv",
+    "num_envs": 4,
+    "max_step": 1_000,
+    "status": "train",
+    "state_dim": 128,
+    "action_dim": 10,
+    "if_discrete": False,
+    "lookback_window": 20,
+    "total_value": 1_000_000,
+    "commision": 0.001,
+    "tax_rate": 0.0,
+    "device": "cuda",
+    "data": train_data,
+    "cwd": "./experiments/ppo/demo",
+}
+
+train_env = PortfolioOptEnv_gym(**env_args)
+train_env = SubprocVecEnv([lambda: train_env for _ in range(env_args["num_envs"])])
+
+model = PPO("MlpPolicy", train_env, verbose=1, seed=42)
+model.learn(total_timesteps=100_000)
+model.save("./experiments/ppo/demo/model/last_model")
 ```
-### Data format
-Data should contains the following columns. Columns after `ticker` should be your features sent to agents.
 
-![dataset](./img/dataset.png)
+## Install Dependencies
+
+```bash
+git clone https://github.com/novis10813/RL-PortfolioOptimization-Env.git
+cd RL-PortfolioOptimization-Env
+pip install -r requirements.txt
+```
+
+## Repository Status
+
+This public repository currently contains the environment documentation, dependency list, and data-format reference image. Treat it as a lightweight reference snapshot for the environment interface and expected data shape.
+
+## License
+
+MIT. See `LICENSE`.
